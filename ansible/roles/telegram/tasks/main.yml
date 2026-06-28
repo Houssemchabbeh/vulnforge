@@ -1,0 +1,11 @@
+---
+# Day 6 — write Telegram credentials to .env from vault
+- name: Write Telegram credentials to .env
+  become: false
+  copy:
+    dest: "/home/{{ vulnforge_user }}/.env"
+    content: |
+      TELEGRAM_BOT_TOKEN={{ telegram_bot_token }}
+      TELEGRAM_CHAT_ID={{ telegram_chat_id }}
+    mode: '0600'
+    owner: "{{ vulnforge_user }}"

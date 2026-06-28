@@ -1,0 +1,16 @@
+VulnForge — Lynis Baseline Security Score
+==========================================
+
+Date:             2026-06-26
+Lynis version:    3.1.7
+Hardening index:  66 / 100
+Stage:            Pre-hardening (Day 1 baseline)
+
+Notes:
+- SELinux already Enforcing
+- firewalld active, default zone: drop, SSH only
+- vulnforge user created, lingering enabled
+- Ansible hardening role not yet applied at time of scan
+
+Next scan will be run after Ansible hardening playbook is applied (Day 1 completion).
+Score improvement will be documented in README.md.

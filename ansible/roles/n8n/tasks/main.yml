@@ -1,0 +1,38 @@
+---
+# Day 4 — deploy n8n orchestrator as rootless Podman container
+- name: Pull n8n image
+  become: false
+  command: podman pull docker.io/n8nio/n8n:latest
+  changed_when: false
+
+- name: Run n8n container
+  become: false
+  command: >
+    podman run -d
+    --name n8n
+    --network vulnforge-net
+    -p 5678:5678
+    -v n8n_data:/home/node/.n8n:Z
+    --restart=unless-stopped
+    docker.io/n8nio/n8n:latest
+  register: n8n_result
+  failed_when:
+    - n8n_result.rc != 0
+    - "'already in use' not in n8n_result.stderr"
+  changed_when: n8n_result.rc == 0
+
+- name: Generate n8n systemd unit
+  become: false
+  shell: |
+    mkdir -p ~/.config/systemd/user
+    podman generate systemd --new --name n8n > ~/.config/systemd/user/n8n.service
+  changed_when: false
+
+- name: Enable and start n8n systemd unit
+  become: false
+  systemd:
+    name: n8n
+    scope: user
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,61 @@
+---
+# Day 2 — deploy DVWA, Juice Shop, WebGoat as rootless Podman containers
+- name: Pull DVWA image
+  become: false
+  command: podman pull --platform linux/amd64 docker.io/vulnerables/web-dvwa:latest
+  changed_when: false
+
+- name: Pull Juice Shop image
+  become: false
+  command: podman pull --platform linux/amd64 docker.io/bkimminich/juice-shop:latest
+  changed_when: false
+
+- name: Pull WebGoat image
+  become: false
+  command: podman pull --platform linux/amd64 docker.io/webgoat/goat-and-wolf:latest
+  changed_when: false
+
+- name: Run DVWA container
+  become: false
+  command: >
+    podman run -d
+    --name dvwa
+    --network vulnforge-net
+    -p 8080:80
+    --restart=unless-stopped
+    docker.io/vulnerables/web-dvwa:latest
+  register: dvwa_result
+  failed_when:
+    - dvwa_result.rc != 0
+    - "'already in use' not in dvwa_result.stderr"
+  changed_when: dvwa_result.rc == 0
+
+- name: Run Juice Shop container
+  become: false
+  command: >
+    podman run -d
+    --name juiceshop
+    --network vulnforge-net
+    -p 8081:3000
+    --restart=unless-stopped
+    docker.io/bkimminich/juice-shop:latest
+  register: juice_result
+  failed_when:
+    - juice_result.rc != 0
+    - "'already in use' not in juice_result.stderr"
+  changed_when: juice_result.rc == 0
+
+- name: Run WebGoat container
+  become: false
+  command: >
+    podman run -d
+    --name webgoat
+    --network vulnforge-net
+    -p 8082:8080
+    --restart=unless-stopped
+    docker.io/webgoat/goat-and-wolf:latest
+  register: webgoat_result
+  failed_when:
+    - webgoat_result.rc != 0
+    - "'already in use' not in webgoat_result.stderr"
+  changed_when: webgoat_result.rc == 0

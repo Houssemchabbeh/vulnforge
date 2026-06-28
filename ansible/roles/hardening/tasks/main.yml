@@ -1,0 +1,71 @@
+---
+- name: Set hostname
+  hostname:
+    name: "{{ vulnforge_hostname }}"
+
+- name: Install base packages
+  dnf:
+    name:
+      - git
+      - vim
+      - curl
+      - tmux
+      - podman
+      - python3-pip
+      - ansible
+    state: present
+
+- name: Install podman-compose via pip (not in RHEL 10 repos)
+  pip:
+    name: podman-compose
+    executable: pip3
+
+- name: Ensure SELinux is enforcing
+  selinux:
+    policy: targeted
+    state: enforcing
+
+- name: Ensure firewalld is enabled and running
+  service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Set default firewall zone to drop
+  command: firewall-cmd --set-default-zone=drop
+  changed_when: false
+
+- name: Ensure SSH is allowed
+  firewalld:
+    service: ssh
+    zone: drop
+    permanent: true
+    state: enabled
+    immediate: true
+
+- name: Open VulnForge app ports
+  firewalld:
+    port: "{{ item }}"
+    zone: drop
+    permanent: true
+    state: enabled
+    immediate: true
+  loop: "{{ vulnforge_app_ports }}"
+
+- name: Apply sysctl hardening
+  include_tasks: sysctl.yml
+
+- name: Harden SSH configuration
+  include_tasks: ssh.yml
+
+- name: Ensure vulnforge user exists
+  user:
+    name: "{{ vulnforge_user }}"
+    groups: wheel
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Enable lingering for rootless Podman
+  command: loginctl enable-linger {{ vulnforge_user }}
+  changed_when: false

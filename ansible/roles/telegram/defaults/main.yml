@@ -1,0 +1,4 @@
+---
+# Override these in vault.yml — never commit real values
+telegram_bot_token: "CHANGE_ME"
+telegram_chat_id: "CHANGE_ME"

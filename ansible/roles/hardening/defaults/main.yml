@@ -1,0 +1,17 @@
+---
+vulnforge_hostname: vulnforge.lab.local
+vulnforge_user: vulnforge
+
+# Firewall ports to open (localhost-only — restrict with rich rules in production)
+vulnforge_app_ports:
+  - "8080/tcp"   # DVWA
+  - "8081/tcp"   # Juice Shop
+  - "8082/tcp"   # WebGoat
+  - "5678/tcp"   # n8n
+
+# SSH hardening
+ssh_permit_root_login: "no"
+ssh_password_auth: "no"
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2

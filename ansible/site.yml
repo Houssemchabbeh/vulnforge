@@ -1,0 +1,14 @@
+---
+- name: VulnForge — full stack deployment
+  hosts: localhost
+  become: true
+  vars_files:
+    - vault.yml
+
+  roles:
+    - hardening
+    - podman_setup
+    - targets
+    - scanners
+    - n8n
+    - telegram

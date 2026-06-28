@@ -1,0 +1,10 @@
+---
+# Day 6 — configure rootless Podman and create vulnforge-net
+- name: Create vulnforge Podman network
+  become: false
+  command: podman network create vulnforge-net
+  register: net_result
+  failed_when:
+    - net_result.rc != 0
+    - "'already exists' not in net_result.stderr"
+  changed_when: net_result.rc == 0

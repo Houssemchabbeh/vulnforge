@@ -1,0 +1,8 @@
+# Encrypt this file before committing:
+#   ansible-vault encrypt ansible/vault.yml
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pass
+---
+telegram_bot_token: "REPLACE_WITH_REAL_TOKEN"
+telegram_chat_id: "REPLACE_WITH_REAL_CHAT_ID"

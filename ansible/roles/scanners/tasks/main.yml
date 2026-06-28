@@ -1,0 +1,46 @@
+---
+# Day 3 — install Nuclei binary and pull ZAP image
+- name: Get latest Nuclei release URL
+  uri:
+    url: https://api.github.com/repos/projectdiscovery/nuclei/releases/latest
+    return_content: true
+  register: nuclei_release
+
+- name: Set Nuclei download URL
+  set_fact:
+    nuclei_url: >-
+      {{ nuclei_release.json.assets
+         | selectattr('name', 'match', '.*linux_amd64.zip')
+         | map(attribute='browser_download_url')
+         | first }}
+
+- name: Download and install Nuclei
+  block:
+    - name: Download Nuclei zip
+      get_url:
+        url: "{{ nuclei_url }}"
+        dest: /tmp/nuclei.zip
+        mode: '0644'
+
+    - name: Unzip Nuclei
+      unarchive:
+        src: /tmp/nuclei.zip
+        dest: /tmp/
+        remote_src: true
+
+    - name: Install Nuclei binary
+      copy:
+        src: /tmp/nuclei
+        dest: /usr/local/bin/nuclei
+        mode: '0755'
+        remote_src: true
+
+- name: Update Nuclei templates
+  become: false
+  command: nuclei -update-templates
+  changed_when: false
+
+- name: Pull OWASP ZAP image
+  become: false
+  command: podman pull --platform linux/amd64 docker.io/owasp/zap2docker-stable:latest
+  changed_when: false
