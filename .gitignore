@@ -1,1 +1,7 @@
 scanners/lynis/
+.env
+*.retry
+reports/raw/*
+reports/parsed/*
+!reports/raw/.gitkeep
+!reports/parsed/.gitkeep

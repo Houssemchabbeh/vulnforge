@@ -12,7 +12,7 @@
 
 - name: Pull WebGoat image
   become: false
-  command: podman pull --platform linux/amd64 docker.io/webgoat/goat-and-wolf:latest
+  command: podman pull --platform linux/amd64 docker.io/webgoat/webgoat:latest
   changed_when: false
 
 - name: Run DVWA container
@@ -53,7 +53,7 @@
     --network vulnforge-net
     -p 8082:8080
     --restart=unless-stopped
-    docker.io/webgoat/goat-and-wolf:latest
+    docker.io/webgoat/webgoat:latest
   register: webgoat_result
   failed_when:
     - webgoat_result.rc != 0
