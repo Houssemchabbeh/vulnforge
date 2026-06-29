@@ -1,0 +1,11 @@
+---
+# Write Discord webhook URL to ~/.env so it is available to scripts
+# and passed into the n8n container at creation time (see roles/n8n).
+- name: Write Discord webhook URL to .env
+  become: false
+  copy:
+    dest: "/home/{{ vulnforge_user }}/.env"
+    content: |
+      DISCORD_WEBHOOK_URL={{ discord_webhook_url }}
+    mode: '0600'
+    owner: "{{ vulnforge_user }}"

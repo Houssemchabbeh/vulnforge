@@ -2,13 +2,22 @@
 - name: VulnForge — full stack deployment
   hosts: localhost
   become: true
+  gather_facts: false
   vars_files:
     - vault.yml
 
+  pre_tasks:
+    # Gather facts as the current user — avoids sudo requirement at fact-gather time.
+    # Tasks that need root still use become: true (hardening role) or
+    # explicitly set become: false (all rootless Podman tasks).
+    - name: Gather facts
+      setup:
+      become: false
+
   roles:
-    - hardening
-    - podman_setup
-    - targets
-    - scanners
-    - n8n
-    - telegram
+    - hardening      # SELinux, sysctl, SSH hardening (needs root)
+    - podman_setup   # create vulnforge-net
+    - discord        # write webhook to ~/.env before n8n container starts
+    - targets        # DVWA, Juice Shop, WebGoat containers
+    - scanners       # Nuclei binary + ZAP image pull
+    - n8n            # n8n container (reads discord_webhook_url from vault)

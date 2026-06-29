@@ -1,5 +1,8 @@
 ---
-# Day 4 — deploy n8n orchestrator as rootless Podman container
+# Deploy n8n orchestrator as rootless Podman container.
+# Requires: vulnforge project dir, nuclei binary, and Podman socket
+# mounted into the container so Execute Command nodes can run scans.
+
 - name: Pull n8n image
   become: false
   command: podman pull docker.io/n8nio/n8n:latest
@@ -13,6 +16,10 @@
     --network vulnforge-net
     -p 5678:5678
     -v n8n_data:/home/node/.n8n:Z
+    -v /home/vulnforge/vulnforge:/vulnforge:Z
+    -v /home/vulnforge/.local/bin/nuclei:/usr/local/bin/nuclei:ro
+    -v /run/user/1000/podman/podman.sock:/run/user/1000/podman/podman.sock:Z
+    --env "DISCORD_WEBHOOK_URL={{ discord_webhook_url }}"
     --restart=unless-stopped
     docker.io/n8nio/n8n:latest
   register: n8n_result
@@ -20,6 +27,12 @@
     - n8n_result.rc != 0
     - "'already in use' not in n8n_result.stderr"
   changed_when: n8n_result.rc == 0
+
+# python3 is needed by parser.py (not in n8n Alpine image by default)
+- name: Install python3 in n8n container
+  become: false
+  command: podman exec n8n apk add --no-cache python3
+  changed_when: false
 
 - name: Generate n8n systemd unit
   become: false

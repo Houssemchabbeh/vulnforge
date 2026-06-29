@@ -20,71 +20,95 @@
     },
     {
       "parameters": {
-        "command": "mkdir -p /reports/raw && nuclei -u http://dvwa:80 -t /home/node/nuclei-templates -o /reports/raw/nuclei_dvwa.json -json -silent -timeout 30; nuclei -u http://juiceshop:3000 -t /home/node/nuclei-templates -o /reports/raw/nuclei_juiceshop.json -json -silent -timeout 30; nuclei -u http://webgoat:8080 -t /home/node/nuclei-templates -o /reports/raw/nuclei_webgoat.json -json -silent -timeout 30; echo scans_complete"
+        "command": "bash /vulnforge/scanners/scan_nuclei.sh"
       },
-      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "id": "n1-nuclei-scan",
       "name": "Run Nuclei Scans",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [440, 300]
+      "position": [440, 200]
     },
     {
       "parameters": {
-        "jsCode": "const fs = require('fs');\n\nfunction parseNucleiFile(path) {\n  try {\n    const content = fs.readFileSync(path, 'utf8');\n    return content.trim().split('\\n')\n      .filter(l => l.trim())\n      .map(l => JSON.parse(l));\n  } catch (e) {\n    return [];\n  }\n}\n\nfunction countSeverities(findings) {\n  const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };\n  for (const f of findings) {\n    const sev = (f.info && f.info.severity ? f.info.severity : 'info').toLowerCase();\n    if (counts[sev] !== undefined) counts[sev]++;\n  }\n  return counts;\n}\n\nconst targets = [\n  { name: 'DVWA',      file: '/reports/raw/nuclei_dvwa.json' },\n  { name: 'JuiceShop', file: '/reports/raw/nuclei_juiceshop.json' },\n  { name: 'WebGoat',   file: '/reports/raw/nuclei_webgoat.json' },\n];\n\nconst results = targets.map(t => {\n  const findings = parseNucleiFile(t.file);\n  const counts = countSeverities(findings);\n  const score = counts.critical * 10 + counts.high * 7 + counts.medium * 4 + counts.low * 1;\n  return { target: t.name, counts, score, total: findings.length };\n});\n\nreturn results.map(r => ({ json: r }));"
+        "command": "bash /vulnforge/scanners/scan_zap.sh"
       },
-      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-      "name": "Parse Results",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "n2-zap-scan",
+      "name": "Run ZAP Scans",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "mode": "waitForAll",
+        "output": "separate"
+      },
+      "id": "n3-merge",
+      "name": "Wait For Both Scanners",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
       "position": [680, 300]
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const items = $input.all();\nconst date = new Date().toISOString().split('T')[0];\n\nconst riskEmoji = (score) => {\n  if (score >= 20) return '🔴';\n  if (score >= 10) return '🟠';\n  if (score >= 1)  return '🟡';\n  return '🟢';\n};\n\nconst fields = items.map(item => {\n  const { target, counts, score } = item.json;\n  return {\n    name: `${riskEmoji(score)} ${target}  (score: ${score})`,\n    value: `C:${counts.critical}  H:${counts.high}  M:${counts.medium}  L:${counts.low}  I:${counts.info}  |  total findings: ${item.json.total}`,\n    inline: false\n  };\n});\n\nconst totalScore = items.reduce((sum, i) => sum + i.json.score, 0);\nconst color = totalScore >= 20 ? 15158332 : totalScore >= 10 ? 15105570 : totalScore >= 1 ? 16312092 : 5763719;\n\nreturn [{\n  json: {\n    embeds: [{\n      title: `VulnForge Scan Report — ${date}`,\n      description: `Combined score across all targets: **${totalScore}**`,\n      color,\n      fields,\n      footer: { text: 'Nuclei · n8n · VulnForge' },\n      timestamp: new Date().toISOString()\n    }]\n  }\n}];"
+        "command": "DATE=$(date +%Y-%m-%d)\npython3 /vulnforge/scanners/parser.py --target dvwa      --date $DATE --out /vulnforge/reports\npython3 /vulnforge/scanners/parser.py --target juiceshop --date $DATE --out /vulnforge/reports\npython3 /vulnforge/scanners/parser.py --target webgoat   --date $DATE --out /vulnforge/reports"
       },
-      "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
-      "name": "Format Discord Message",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "n4-parse",
+      "name": "Run Parser",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [920, 300]
     },
     {
       "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const stdout = $input.first().json.stdout || '';\nconst date  = new Date().toISOString().split('T')[0];\n\n// Extract the Discord: lines emitted by parser.py\nconst discordLines = stdout\n  .split('\\n')\n  .filter(l => l.startsWith('Discord: '))\n  .map(l => l.replace('Discord: ', ''));\n\n// Pick embed colour from the worst severity found across all targets\nconst pickColor = (lines) => {\n  if (lines.some(l => l.includes('Critical:'))) return 15158332; // red\n  if (lines.some(l => l.includes('High:')))     return 15105570; // orange\n  if (lines.some(l => l.includes('Medium:')))   return 16312092; // yellow\n  return 5763719;                                                 // green\n};\n\nconst description = discordLines.length\n  ? discordLines.join('\\n')\n  : 'No findings reported.';\n\nreturn [{\n  json: {\n    embeds: [{\n      title: `VulnForge Scan Report — ${date}`,\n      description,\n      color: pickColor(discordLines),\n      footer: { text: 'OWASP ZAP + Nuclei · VulnForge' },\n      timestamp: new Date().toISOString()\n    }]\n  }\n}];"
+      },
+      "id": "n5-format",
+      "name": "Format Discord Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "={{ $vars.DISCORD_WEBHOOK_URL }}",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
         "body": "={{ JSON.stringify($json) }}"
       },
-      "id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+      "id": "n6-discord",
       "name": "Discord Notify",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1160, 300]
+      "position": [1400, 300]
     }
   ],
   "connections": {
     "Schedule Trigger": {
       "main": [
-        [{"node": "Run Nuclei Scans", "type": "main", "index": 0}]
+        [
+          {"node": "Run Nuclei Scans", "type": "main", "index": 0},
+          {"node": "Run ZAP Scans",    "type": "main", "index": 0}
+        ]
       ]
     },
     "Run Nuclei Scans": {
-      "main": [
-        [{"node": "Parse Results", "type": "main", "index": 0}]
-      ]
+      "main": [[{"node": "Wait For Both Scanners", "type": "main", "index": 0}]]
     },
-    "Parse Results": {
-      "main": [
-        [{"node": "Format Discord Message", "type": "main", "index": 0}]
-      ]
+    "Run ZAP Scans": {
+      "main": [[{"node": "Wait For Both Scanners", "type": "main", "index": 1}]]
+    },
+    "Wait For Both Scanners": {
+      "main": [[{"node": "Run Parser", "type": "main", "index": 0}]]
+    },
+    "Run Parser": {
+      "main": [[{"node": "Format Discord Message", "type": "main", "index": 0}]]
     },
     "Format Discord Message": {
-      "main": [
-        [{"node": "Discord Notify", "type": "main", "index": 0}]
-      ]
+      "main": [[{"node": "Discord Notify", "type": "main", "index": 0}]]
     }
   },
   "active": false,

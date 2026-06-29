@@ -1,0 +1,3 @@
+---
+# Override in vault.yml — never commit real values
+discord_webhook_url: "CHANGE_ME"
