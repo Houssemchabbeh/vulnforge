@@ -42,5 +42,5 @@
 
 - name: Pull OWASP ZAP image
   become: false
-  command: podman pull --platform linux/amd64 docker.io/owasp/zap2docker-stable:latest
+  command: podman pull ghcr.io/zaproxy/zaproxy:stable
   changed_when: false
