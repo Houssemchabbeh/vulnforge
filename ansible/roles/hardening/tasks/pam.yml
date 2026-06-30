@@ -1,0 +1,40 @@
+---
+- name: Install password quality library
+  dnf:
+    name: libpwquality
+    state: present
+
+- name: Configure password quality policy
+  lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^#?minlen',   line: 'minlen = 12' }
+    - { regexp: '^#?dcredit',  line: 'dcredit = -1' }
+    - { regexp: '^#?ucredit',  line: 'ucredit = -1' }
+    - { regexp: '^#?lcredit',  line: 'lcredit = -1' }
+    - { regexp: '^#?ocredit',  line: 'ocredit = -1' }
+    - { regexp: '^#?maxrepeat', line: 'maxrepeat = 3' }
+
+- name: Configure faillock (account lockout after failed logins)
+  lineinfile:
+    path: /etc/security/faillock.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    create: true
+  loop:
+    - { regexp: '^#?deny',          line: 'deny = 5' }
+    - { regexp: '^#?unlock_time',   line: 'unlock_time = 300' }
+    - { regexp: '^#?fail_interval', line: 'fail_interval = 900' }
+    - { regexp: '^#?audit',         line: 'audit' }
+
+- name: Set password aging policy in login.defs
+  lineinfile:
+    path: /etc/login.defs
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^PASS_MAX_DAYS', line: 'PASS_MAX_DAYS   90' }
+    - { regexp: '^PASS_MIN_DAYS', line: 'PASS_MIN_DAYS   7' }
+    - { regexp: '^PASS_WARN_AGE', line: 'PASS_WARN_AGE   14' }

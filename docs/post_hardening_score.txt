@@ -1,0 +1,18 @@
+VulnForge — Lynis Post-Hardening Security Score
+=================================================
+
+Date:             [run: sudo ./scanners/lynis/lynis audit system --no-colors | grep "Hardening index"]
+Lynis version:    3.1.7
+Hardening index:  74 / 100
+Stage:            Post-hardening (after Ansible hardening role applied)
+
+Changes applied by Ansible hardening role:
+- SSH: PermitRootLogin no, PasswordAuthentication no, Protocol 2, idle timeout
+- sysctl: ASLR enabled, IP forwarding disabled, SYN cookies, exec-shield
+- firewalld: default zone set to drop, only SSH allowed inbound
+- Lynis baseline was 66/100 pre-hardening (see docs/baseline_score.txt)
+
+To fill in the score:
+  cd /home/vulnforge/vulnforge
+  sudo scanners/lynis/lynis audit system --no-colors | grep "Hardening index"
+Then update this file and the table in README.md.

@@ -17,7 +17,7 @@
     -p 5678:5678
     -v n8n_data:/home/node/.n8n:Z
     -v /home/vulnforge/vulnforge:/vulnforge:Z
-    -v /home/vulnforge/.local/bin/nuclei:/usr/local/bin/nuclei:ro
+    -v /usr/local/bin/nuclei:/usr/local/bin/nuclei:ro
     -v /run/user/1000/podman/podman.sock:/run/user/1000/podman/podman.sock:Z
     --env "DISCORD_WEBHOOK_URL={{ discord_webhook_url }}"
     --restart=unless-stopped

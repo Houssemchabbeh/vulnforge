@@ -12,7 +12,6 @@
       - tmux
       - podman
       - python3-pip
-      - ansible
     state: present
 
 - name: Install podman-compose via pip (not in RHEL 10 repos)
@@ -57,6 +56,15 @@
 
 - name: Harden SSH configuration
   include_tasks: ssh.yml
+
+- name: Install and configure auditd
+  include_tasks: auditd.yml
+
+- name: Harden PAM — password policy and account lockout
+  include_tasks: pam.yml
+
+- name: Disable unused services and tighten OS defaults
+  include_tasks: services.yml
 
 - name: Ensure vulnforge user exists
   user:

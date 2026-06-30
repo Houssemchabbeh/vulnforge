@@ -1,0 +1,48 @@
+---
+- name: Disable unused services
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - bluetooth
+    - avahi-daemon
+    - cups
+  ignore_errors: true
+
+- name: Harden default umask in /etc/profile
+  lineinfile:
+    path: /etc/profile
+    regexp: '^umask'
+    line: 'umask 027'
+
+- name: Harden default umask in /etc/bashrc
+  lineinfile:
+    path: /etc/bashrc
+    regexp: '^umask'
+    line: 'umask 027'
+
+- name: Restrict core dumps for all users
+  blockinfile:
+    path: /etc/security/limits.conf
+    marker: "# {mark} VULNFORGE HARDENING"
+    block: |
+      * hard core 0
+      * soft core 0
+
+- name: Disable USB storage kernel module
+  copy:
+    dest: /etc/modprobe.d/disable-usb-storage.conf
+    content: "install usb-storage /bin/false\n"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Configure sudo audit logging
+  copy:
+    dest: /etc/sudoers.d/vulnforge-logging
+    content: "Defaults logfile=\"/var/log/sudo.log\"\n"
+    owner: root
+    group: root
+    mode: '0440'
+    validate: 'visudo -cf %s'

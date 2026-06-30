@@ -1,0 +1,38 @@
+---
+- name: Install audit packages
+  dnf:
+    name:
+      - audit
+      - audispd-plugins
+    state: present
+
+- name: Enable and start auditd
+  service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: Deploy audit rules
+  copy:
+    dest: /etc/audit/rules.d/vulnforge.rules
+    owner: root
+    group: root
+    mode: '0640'
+    content: |
+      # Clear existing rules
+      -D
+      # Buffer size
+      -b 8192
+      # Identity changes
+      -w /etc/passwd -p wa -k identity
+      -w /etc/group -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+      -w /etc/sudoers -p wa -k sudoers
+      # SSH config changes
+      -w /etc/ssh/sshd_config -p wa -k sshd
+      # Login events
+      -w /var/log/lastlog -p wa -k logins
+      -w /var/run/faillock -p wa -k logins
+      # Privileged command execution
+      -a always,exit -F arch=b64 -S execve -F euid=0 -k root_commands
+  notify: Restart auditd
